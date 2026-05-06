@@ -44,10 +44,11 @@ export function PlannerForm() {
             name="days"
             type="number"
             min="1"
-            max="3"
+            max="7"
             defaultValue="2"
             className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 outline-none"
           />
+          <span className="text-xs text-slate-500">Maksimal 7 hari untuk satu itinerary.</span>
         </label>
 
         <label className="flex flex-col gap-2">

@@ -120,6 +120,24 @@ function buildStops(dayIndex: number, dailyPool: Destination[]) {
   });
 }
 
+function buildDailyPool(selected: Destination[], dayIndex: number, perDay: number) {
+  if (selected.length === 0) {
+    return [];
+  }
+
+  const start = dayIndex * perDay;
+  const directSlice = selected.slice(start, start + perDay);
+
+  if (directSlice.length === perDay) {
+    return directSlice;
+  }
+
+  return Array.from({ length: perDay }, (_, offset) => {
+    const index = (start + offset) % selected.length;
+    return selected[index];
+  });
+}
+
 function buildBudget(input: TripFormInput, selected: Destination[]): BudgetBreakdown {
   const tickets = selected.reduce((sum, item) => sum + item.entryFee, 0) * input.travelers;
   const food = selected.reduce((sum, item) => sum + item.mealBudget, 0) * input.travelers;
@@ -141,12 +159,12 @@ function buildBudget(input: TripFormInput, selected: Destination[]): BudgetBreak
 
 export function generateTripPlan(input: TripFormInput): TripPlan {
   const selected = pickDestinations(input);
-  const perDay = Math.max(1, Math.ceil(selected.length / input.days));
+  const perDay = selected.length >= input.days ? Math.max(1, Math.ceil(selected.length / input.days)) : 1;
   const usesGenericFallback = selected.every((item) => item.coordinates === "Custom");
 
   const days: ItineraryDay[] = Array.from({ length: input.days }, (_, index) => {
-    const slice = selected.slice(index * perDay, index * perDay + perDay);
-    const stops = buildStops(index, slice.length > 0 ? slice : selected.slice(0, 1));
+    const dayPool = buildDailyPool(selected, index, perDay);
+    const stops = buildStops(index, dayPool.length > 0 ? dayPool : selected.slice(0, 1));
     const subtotal = stops.reduce((sum, stop) => sum + stop.cost * input.travelers, 0);
 
     return {

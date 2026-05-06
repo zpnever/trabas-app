@@ -6,6 +6,18 @@ function formatCurrency(value: number) {
   return `Rp${new Intl.NumberFormat("id-ID").format(value)}`;
 }
 
+function formatStyle(style: string) {
+  if (style === "hidden-gem") {
+    return "Hidden Gem";
+  }
+
+  if (style === "hemat") {
+    return "Hemat";
+  }
+
+  return "Balanced";
+}
+
 function readPlan(input: string | undefined): TripPlan | null {
   if (!input) {
     return null;
@@ -56,13 +68,31 @@ export default async function PreviewPage({
             </h1>
             <p className="font-body mt-4 text-base leading-7 text-slate-600">{plan.summary}</p>
             <div className="font-body mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
-              <span className="pill rounded-full px-4 py-2">Style: {plan.input.style}</span>
+              <span className="pill rounded-full px-4 py-2">Style: {formatStyle(plan.input.style)}</span>
               <span className="pill rounded-full px-4 py-2">Budget: {formatCurrency(plan.input.budget)}</span>
               <span className="pill rounded-full px-4 py-2">Status: {plan.budget.status === "safe" ? "Aman" : "Melebihi budget"}</span>
             </div>
+            <div className="mt-8 grid gap-4 sm:grid-cols-3">
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
+                <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">Hari</p>
+                <p className="font-display mt-2 text-3xl text-slate-900">{plan.days.length}</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
+                <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">Stop</p>
+                <p className="font-display mt-2 text-3xl text-slate-900">
+                  {plan.days.reduce((count, day) => count + day.stops.length, 0)}
+                </p>
+              </div>
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
+                <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">Sisa budget</p>
+                <p className={`font-display mt-2 text-3xl ${plan.budget.remaining >= 0 ? "text-teal-700" : "text-rose-600"}`}>
+                  {plan.budget.remaining >= 0 ? formatCurrency(plan.budget.remaining) : `- ${formatCurrency(Math.abs(plan.budget.remaining))}`}
+                </p>
+              </div>
+            </div>
           </div>
 
-          <aside className="card rounded-[2rem] p-6 lg:p-8">
+          <aside className="card rounded-[2rem] p-6 lg:sticky lg:top-6 lg:h-fit lg:p-8">
             <p className="font-body text-sm uppercase tracking-[0.22em] text-amber-600">Budget Planner</p>
             <div className="font-body mt-5 space-y-4 text-sm text-slate-700">
               <div className="flex justify-between">
@@ -111,17 +141,26 @@ export default async function PreviewPage({
                   </div>
                 </div>
 
-                <div className="mt-6 grid gap-4">
-                  {day.stops.map((stop) => (
-                    <div key={`${day.dayLabel}-${stop.destinationId}`} className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-5">
-                      <div className="flex flex-wrap items-center justify-between gap-4">
-                        <div>
-                          <p className="font-body text-sm text-teal-700">{stop.time}</p>
-                          <h3 className="font-display mt-1 text-2xl text-slate-900">{stop.title}</h3>
+                <div className="mt-6 space-y-4">
+                  {day.stops.map((stop, stopIndex) => (
+                    <div key={`${day.dayLabel}-${stop.destinationId}-${stopIndex}`} className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white/70 p-5 md:grid-cols-[110px_1fr]">
+                      <div className="flex items-start md:justify-center">
+                        <div className="rounded-[1.25rem] bg-teal-50 px-4 py-3 text-center">
+                          <p className="font-body text-xs uppercase tracking-[0.14em] text-teal-700">Mulai</p>
+                          <p className="font-display mt-1 text-2xl text-slate-900">{stop.time}</p>
                         </div>
-                        <div className="font-body text-sm font-semibold text-slate-700">{formatCurrency(stop.cost)}</div>
                       </div>
-                      <p className="font-body mt-3 text-sm leading-6 text-slate-600">{stop.notes}</p>
+                      <div>
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                          <div>
+                            <h3 className="font-display text-2xl text-slate-900">{stop.title}</h3>
+                            <p className="font-body mt-2 text-sm leading-6 text-slate-600">{stop.notes}</p>
+                          </div>
+                          <div className="rounded-full border border-slate-200 bg-white px-4 py-2 font-body text-sm font-semibold text-slate-700">
+                            {formatCurrency(stop.cost)}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -129,10 +168,10 @@ export default async function PreviewPage({
             ))}
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-6 lg:sticky lg:top-6 lg:h-fit">
             <section className="card rounded-[2rem] p-6 lg:p-8">
               <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Ringkasan Akses Destinasi</p>
-              <div className="mt-5 space-y-3">
+              <div className="mt-5 grid gap-3">
                 {plan.cart.map((ticket) => (
                   <div key={ticket.destinationId} className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
                     <div className="flex items-center justify-between gap-3">
