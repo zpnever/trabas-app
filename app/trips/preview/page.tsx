@@ -50,7 +50,7 @@ export default async function PreviewPage({
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:px-10">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="card rounded-[2rem] p-6 lg:p-8">
-            <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Generated Itinerary</p>
+            <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Itinerary</p>
             <h1 className="font-display mt-2 text-4xl text-slate-900">
               {plan.input.city}, {plan.input.days} hari untuk {plan.input.travelers} traveler
             </h1>
@@ -58,7 +58,7 @@ export default async function PreviewPage({
             <div className="font-body mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
               <span className="pill rounded-full px-4 py-2">Style: {plan.input.style}</span>
               <span className="pill rounded-full px-4 py-2">Budget: {formatCurrency(plan.input.budget)}</span>
-              <span className="pill rounded-full px-4 py-2">Status: {plan.budget.status === "safe" ? "Aman" : "Over budget"}</span>
+              <span className="pill rounded-full px-4 py-2">Status: {plan.budget.status === "safe" ? "Aman" : "Melebihi budget"}</span>
             </div>
           </div>
 
@@ -131,7 +131,7 @@ export default async function PreviewPage({
 
           <div className="space-y-6">
             <section className="card rounded-[2rem] p-6 lg:p-8">
-              <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Pre-Order Tickets</p>
+              <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Ringkasan Akses Destinasi</p>
               <div className="mt-5 space-y-3">
                 {plan.cart.map((ticket) => (
                   <div key={ticket.destinationId} className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
@@ -147,7 +147,7 @@ export default async function PreviewPage({
                       </span>
                     </div>
                     <p className="font-body mt-2 text-sm text-slate-600">
-                      Harga tiket: {formatCurrency(ticket.ticketPrice)}. Tahap berikutnya tinggal sambungkan ke checkout dan generator QR nyata.
+                      Estimasi biaya masuk: {formatCurrency(ticket.ticketPrice)}. Simpan kode referensi ini untuk memudahkan pencatatan trip dan koordinasi rombongan.
                     </p>
                   </div>
                 ))}
@@ -155,7 +155,7 @@ export default async function PreviewPage({
             </section>
 
             <section className="card rounded-[2rem] p-6 lg:p-8">
-              <p className="font-body text-sm uppercase tracking-[0.22em] text-amber-600">AI Suggestions</p>
+              <p className="font-body text-sm uppercase tracking-[0.22em] text-amber-600">Rekomendasi Optimasi</p>
               <div className="mt-4 space-y-3">
                 {plan.suggestions.map((suggestion) => (
                   <div key={suggestion} className="font-body rounded-[1.25rem] border border-slate-200 bg-white/70 p-4 text-sm leading-6 text-slate-700">

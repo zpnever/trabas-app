@@ -17,7 +17,7 @@ export function Header() {
       <nav className="font-body hidden gap-6 text-sm text-slate-600 md:flex">
         <a href="#fitur">Fitur</a>
         <a href="#planner">Planner</a>
-        <a href="#roadmap">Roadmap</a>
+        <a href="#experience">Pengalaman</a>
       </nav>
     </header>
   );

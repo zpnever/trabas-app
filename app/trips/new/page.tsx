@@ -11,6 +11,10 @@ export default function NewTripPage() {
           <h1 className="font-display mt-2 text-5xl leading-tight text-slate-900">
             Isi preferensi perjalanan, lalu biarkan TRABAS menyusun ritme trip-nya.
           </h1>
+          <p className="font-body mt-4 text-base leading-7 text-slate-600">
+            Tulis lokasi sedetail yang kamu butuhkan, lalu dapatkan susunan kunjungan, estimasi biaya, dan rekomendasi
+            perjalanan dalam satu alur.
+          </p>
         </div>
         <PlannerForm />
       </section>

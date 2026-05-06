@@ -1,5 +1,4 @@
 import { createTripAction } from "@/app/trips/new/actions";
-import { supportedCities } from "@/lib/mock-data";
 
 export function PlannerForm() {
   return (
@@ -9,19 +8,22 @@ export function PlannerForm() {
           <p className="text-sm uppercase tracking-[0.24em] text-teal-700">AI Trip Planner</p>
           <h2 className="font-display mt-2 text-3xl text-slate-900">Rancang micro-trip dalam sekali isi</h2>
         </div>
-        <div className="pill rounded-full px-4 py-2 text-xs text-slate-600">MVP tanpa login</div>
+        <div className="pill rounded-full px-4 py-2 text-xs text-slate-600">Respons cepat dan personal</div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         <label className="flex flex-col gap-2">
-          <span className="text-sm text-slate-600">Kota</span>
-          <select name="city" className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 outline-none">
-            {supportedCities.map((city) => (
-              <option key={city} value={city}>
-                {city}
-              </option>
-            ))}
-          </select>
+          <span className="text-sm text-slate-600">Lokasi tujuan</span>
+          <input
+            name="city"
+            type="text"
+            defaultValue="Malioboro, Yogyakarta"
+            placeholder="Contoh: Lembang, Bandung Utara, Ubud, Malioboro"
+            className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 outline-none"
+          />
+          <span className="text-xs text-slate-500">
+            Bisa isi lokasi spesifik, kecamatan, kawasan wisata, atau nama area yang kamu mau.
+          </span>
         </label>
 
         <label className="flex flex-col gap-2">
@@ -74,7 +76,7 @@ export function PlannerForm() {
           <textarea
             name="notes"
             rows={4}
-            placeholder="Contoh: suka sunrise, hindari tempat terlalu ramai, cari kuliner lokal halal."
+            placeholder="Contoh: suka sunrise, hindari tempat terlalu ramai, cari kuliner lokal halal, butuh stroller-friendly."
             className="rounded-2xl border border-slate-200 bg-white/80 px-4 py-3 outline-none"
           />
         </label>
@@ -84,7 +86,7 @@ export function PlannerForm() {
         type="submit"
         className="mt-6 inline-flex items-center justify-center rounded-full bg-teal-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-teal-800"
       >
-        Generate itinerary
+        Susun itinerary
       </button>
     </form>
   );

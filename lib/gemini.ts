@@ -31,11 +31,20 @@ type GeminiTripPayload = {
 const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-2.0-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
+function normalize(value: string) {
+  return value.trim().toLowerCase();
+}
+
 function findDestinationByTitle(city: string, title: string) {
   const normalized = title.trim().toLowerCase();
+  const normalizedCity = normalize(city);
 
   return destinations.find(
-    (item) => item.city === city && item.name.trim().toLowerCase() === normalized
+    (item) =>
+      (normalize(item.city) === normalizedCity ||
+        normalize(item.city).includes(normalizedCity) ||
+        normalizedCity.includes(normalize(item.city))) &&
+      item.name.trim().toLowerCase() === normalized
   );
 }
 
@@ -114,10 +123,25 @@ function hydrateGeminiPlan(input: TripFormInput, payload: GeminiTripPayload): Tr
 
 function buildPrompt(input: TripFormInput) {
   const cityDestinations = destinations
-    .filter((item) => item.city === input.city)
+    .filter((item) => {
+      const destinationCity = normalize(item.city);
+      const inputCity = normalize(input.city);
+
+      return (
+        destinationCity === inputCity ||
+        destinationCity.includes(inputCity) ||
+        inputCity.includes(destinationCity)
+      );
+    })
     .map(
       (item) =>
         `- ${item.name} | type: ${item.type} | category: ${item.category} | fee: ${item.entryFee} | hours: ${item.operatingHours} | summary: ${item.summary}`
+    )
+    .join("\n");
+  const fallbackReference = destinations
+    .map(
+      (item) =>
+        `- ${item.name} (${item.city}) | type: ${item.type} | category: ${item.category} | fee: ${item.entryFee} | hours: ${item.operatingHours}`
     )
     .join("\n");
 
@@ -126,21 +150,22 @@ Kamu adalah AI itinerary planner untuk aplikasi TRABAS.
 Tugasmu membuat itinerary micro-trip yang realistis, efisien, dan sesuai budget.
 
 Input pengguna:
-- kota: ${input.city}
+- lokasi tujuan: ${input.city}
 - durasi hari: ${input.days}
 - jumlah traveler: ${input.travelers}
 - budget total rupiah: ${input.budget}
 - gaya perjalanan: ${input.style}
 - preferensi tambahan: ${input.notes || "tidak ada"}
 
-Data destinasi tersedia:
-${cityDestinations}
+${cityDestinations ? `Data destinasi yang cukup relevan:\n${cityDestinations}` : `Belum ada data destinasi lokal yang persis untuk lokasi ini di database saat ini.
+Kalau perlu, kamu boleh menyusun itinerary berdasarkan pengetahuan umum tentang area tersebut dan referensi pola berikut:
+${fallbackReference}`}
 
 Aturan:
 - prioritaskan rute yang logis dan tidak bolak-balik
 - perhatikan jam operasional
 - hindari jadwal yang mustahil
-- gunakan nama destinasi persis seperti di data jika dipilih
+- gunakan nama destinasi persis seperti di data jika memakai data referensi yang tersedia
 - kalau budget mepet, pilih kombinasi yang lebih hemat
 - hasil harus dalam Bahasa Indonesia
 
