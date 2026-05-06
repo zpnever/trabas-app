@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { generateTripPlanWithOpenAI } from "@/lib/openai";
+import { generateTripPlanWithGemini } from "@/lib/gemini";
 import { TripFormInput } from "@/lib/types";
 
 function toPositiveInt(value: FormDataEntryValue | null, fallback: number) {
@@ -34,7 +34,7 @@ export async function createTripAction(formData: FormData) {
     })}`
   );
 
-  const plan = await generateTripPlanWithOpenAI(input);
+  const plan = await generateTripPlanWithGemini(input);
   const encoded = encodeURIComponent(Buffer.from(JSON.stringify(plan)).toString("base64url"));
 
   console.info(

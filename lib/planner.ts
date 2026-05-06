@@ -9,12 +9,31 @@ function formatRupiah(value: number) {
   return new Intl.NumberFormat("id-ID").format(value);
 }
 
+function calculateStopTotal(entryFee: number, mealCost: number, transportCost: number, travelers: number) {
+  return (entryFee + mealCost) * travelers + transportCost;
+}
+
 function hoursToLabel(hour: number) {
   return `${hour.toString().padStart(2, "0")}:00`;
 }
 
+function minutesToRange(startMinutes: number, endMinutes: number) {
+  const format = (value: number) => {
+    const hour = Math.floor(value / 60);
+    const minute = value % 60;
+
+    return `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+  };
+
+  return `${format(startMinutes)} - ${format(endMinutes)}`;
+}
+
 function normalize(value: string) {
   return value.trim().toLowerCase();
+}
+
+function buildMapsUrl(query: string) {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 }
 
 function createGenericDestinations(input: TripFormInput): Destination[] {
@@ -25,6 +44,7 @@ function createGenericDestinations(input: TripFormInput): Destination[] {
       id: `${slugify(location)}-landmark`,
       name: `Landmark ${location}`,
       city: location,
+      address: `${location}, Indonesia`,
       type: "Popular",
       category: "Sightseeing",
       coordinates: "Custom",
@@ -41,6 +61,7 @@ function createGenericDestinations(input: TripFormInput): Destination[] {
       id: `${slugify(location)}-kuliner`,
       name: `Sentra Kuliner ${location}`,
       city: location,
+      address: `${location}, Indonesia`,
       type: "Hidden Gem",
       category: "Food",
       coordinates: "Custom",
@@ -57,6 +78,7 @@ function createGenericDestinations(input: TripFormInput): Destination[] {
       id: `${slugify(location)}-santai`,
       name: `Spot Santai ${location}`,
       city: location,
+      address: `${location}, Indonesia`,
       type: "Hidden Gem",
       category: "Leisure",
       coordinates: "Custom",
@@ -99,23 +121,42 @@ function pickDestinations(input: TripFormInput) {
   return sorted.slice(0, needed);
 }
 
-function buildStops(dayIndex: number, dailyPool: Destination[]) {
-  let currentHour = 8;
+function buildStops(dayIndex: number, dailyPool: Destination[], travelers: number) {
+  let currentMinutes = 8 * 60;
 
   return dailyPool.map<ItineraryStop>((destination, index) => {
-    currentHour = Math.max(currentHour, destination.openAt);
-    const label = hoursToLabel(currentHour);
-    currentHour += Math.ceil(destination.visitMinutes / 60) + (index === 0 ? 1 : 0);
+    currentMinutes = Math.max(currentMinutes, destination.openAt * 60);
+
+    const startMinutes = currentMinutes;
+    const transferMinutes = index === 0 ? 0 : 30;
+    const rawEndMinutes = startMinutes + destination.visitMinutes + transferMinutes;
+    const endMinutes = Math.min(
+      Math.max(rawEndMinutes, startMinutes + 60),
+      destination.closeAt * 60
+    );
+    const label = minutesToRange(startMinutes, endMinutes);
+
+    currentMinutes = endMinutes;
 
     return {
       time: label,
       destinationId: destination.id,
       title: destination.name,
-      cost: destination.entryFee + destination.mealBudget + destination.transportBudget,
+      address: destination.address,
+      mapsUrl: buildMapsUrl(`${destination.name}, ${destination.address}`),
+      entryFee: destination.entryFee,
+      mealCost: destination.mealBudget,
+      transportCost: destination.transportBudget,
+      cost: calculateStopTotal(
+        destination.entryFee,
+        destination.mealBudget,
+        destination.transportBudget,
+        travelers
+      ),
       notes:
         dayIndex === 0 && index === 0
-          ? `Mulai dari lokasi dengan operasional pagi agar itinerary tetap realistis.`
-          : `${destination.summary} Jam operasional ${destination.operatingHours}.`
+          ? `Mulai dari lokasi dengan operasional pagi agar itinerary tetap realistis. Jam kunjungan disusun agar masih ada ruang perpindahan berikutnya.`
+          : `${destination.summary} Jam operasional ${destination.operatingHours}. Rentang waktu ini sudah mempertimbangkan perpindahan antarlokasi.`
     };
   });
 }
@@ -157,6 +198,34 @@ function buildBudget(input: TripFormInput, selected: Destination[]): BudgetBreak
   };
 }
 
+function buildBudgetFromStops(days: ItineraryDay[], budgetLimit: number, travelers: number): BudgetBreakdown {
+  const tickets = days.reduce(
+    (sum, day) => sum + day.stops.reduce((inner, stop) => inner + stop.entryFee * travelers, 0),
+    0
+  );
+  const food = days.reduce(
+    (sum, day) => sum + day.stops.reduce((inner, stop) => inner + stop.mealCost * travelers, 0),
+    0
+  );
+  const transport = days.reduce(
+    (sum, day) => sum + day.stops.reduce((inner, stop) => inner + stop.transportCost, 0),
+    0
+  );
+  const buffer = Math.round(budgetLimit * 0.1);
+  const total = tickets + food + transport + buffer;
+  const remaining = budgetLimit - total;
+
+  return {
+    tickets,
+    food,
+    transport,
+    buffer,
+    total,
+    remaining,
+    status: remaining >= 0 ? "safe" : "warning"
+  };
+}
+
 export function generateTripPlan(input: TripFormInput): TripPlan {
   const selected = pickDestinations(input);
   const perDay = selected.length >= input.days ? Math.max(1, Math.ceil(selected.length / input.days)) : 1;
@@ -164,8 +233,8 @@ export function generateTripPlan(input: TripFormInput): TripPlan {
 
   const days: ItineraryDay[] = Array.from({ length: input.days }, (_, index) => {
     const dayPool = buildDailyPool(selected, index, perDay);
-    const stops = buildStops(index, dayPool.length > 0 ? dayPool : selected.slice(0, 1));
-    const subtotal = stops.reduce((sum, stop) => sum + stop.cost * input.travelers, 0);
+    const stops = buildStops(index, dayPool.length > 0 ? dayPool : selected.slice(0, 1), input.travelers);
+    const subtotal = stops.reduce((sum, stop) => sum + stop.cost, 0);
 
     return {
       dayLabel: `Hari ${index + 1}`,
@@ -180,7 +249,7 @@ export function generateTripPlan(input: TripFormInput): TripPlan {
     };
   });
 
-  const budget = buildBudget(input, selected);
+  const budget = buildBudgetFromStops(days, input.budget, input.travelers);
   const titleSummary =
     budget.status === "safe"
       ? `Trip ${input.days} hari di ${input.city} masih masuk budget dengan sisa Rp${formatRupiah(

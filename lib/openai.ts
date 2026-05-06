@@ -37,6 +37,7 @@ const OPENAI_MODEL = process.env.OPENAI_MODEL || "openai/gpt-oss-20b";
 const OPENAI_TIMEOUT_MS = 20_000;
 const OPENAI_BASE_URL =
 	process.env.OPENAI_BASE_URL || "https://api.groq.com/openai/v1";
+const OPENAI_MAX_OUTPUT_TOKENS = 2200;
 let cachedClient: OpenAI | null = null;
 
 function logOpenAI(
@@ -177,6 +178,10 @@ function parseTripPayload(value: string) {
 	return safeJsonParse<OpenAITripPayload>(embeddedJson);
 }
 
+function buildMapsUrl(query: string) {
+	return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
 function hydrateOpenAIPlan(
 	input: TripFormInput,
 	payload: OpenAITripPayload,
@@ -198,6 +203,8 @@ function hydrateOpenAIPlan(
 					matched?.id ||
 					`custom-${dayIndex}-${stop.title.toLowerCase().replace(/\s+/g, "-")}`,
 				title: stop.title,
+				address: matched?.address || `${stop.title}, ${input.city}`,
+				mapsUrl: buildMapsUrl(matched?.address ? `${stop.title}, ${matched.address}` : `${stop.title}, ${input.city}`),
 				cost: baseCost,
 				notes: stop.notes,
 			};
@@ -295,6 +302,7 @@ Aturan:
 - prioritaskan rute yang logis dan tidak bolak-balik
 - perhatikan jam operasional
 - hindari jadwal yang mustahil
+- setiap stop wajib memakai rentang jam spesifik, contoh "08:00 - 10:00"
 - gunakan nama destinasi persis seperti di data jika memakai data referensi yang tersedia
 - kalau budget mepet, pilih kombinasi yang lebih hemat
 - hasil harus dalam Bahasa Indonesia
@@ -308,7 +316,7 @@ Balas HANYA dalam JSON valid dengan bentuk:
       "theme": "string",
       "stops": [
         {
-          "time": "08:00",
+          "time": "08:00 - 10:00",
           "title": "Nama destinasi",
           "notes": "alasan atau catatan singkat"
         }
@@ -318,6 +326,39 @@ Balas HANYA dalam JSON valid dengan bentuk:
   "suggestions": ["string", "string", "string"]
 }
 Jangan tambahkan penjelasan, reasoning, pembuka, atau markdown di luar JSON.
+`.trim();
+}
+
+function buildRetryPrompt(input: TripFormInput) {
+	return `
+Balas hanya dengan JSON valid tanpa markdown atau teks lain.
+
+Susun itinerary perjalanan untuk:
+- lokasi: ${input.city}
+- durasi: ${input.days} hari
+- traveler: ${input.travelers}
+- budget: ${input.budget}
+- gaya: ${input.style}
+- preferensi: ${input.notes || "tidak ada"}
+
+Gunakan format JSON ini saja:
+{
+  "summary": "string",
+  "days": [
+    {
+      "dayLabel": "Hari 1",
+      "theme": "string",
+      "stops": [
+        {
+          "time": "08:00 - 10:00",
+          "title": "string",
+          "notes": "string"
+        }
+      ]
+    }
+  ],
+  "suggestions": ["string", "string", "string"]
+}
 `.trim();
 }
 
@@ -355,23 +396,51 @@ export async function generateTripPlanWithOpenAI(
 			model: OPENAI_MODEL,
 			instructions: "Kamu adalah AI itinerary planner untuk aplikasi TRABAS.",
 			input: buildPrompt(input),
-			max_output_tokens: 1400,
+			max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS,
 		});
 		const text = extractText(response as OpenAIResponse);
-		const parsed = parseTripPayload(text);
+		let parsed = parseTripPayload(text);
 
 		if (!parsed) {
-			logOpenAI(
-				"error",
-				"Respons OpenAI tidak bisa diparse sebagai JSON valid, memakai fallback planner lokal.",
-				{
-					...context,
-					requestId:
-						"_request_id" in response ? response._request_id : undefined,
-					preview: text.slice(0, 500),
-				},
-			);
-			return generateTripPlan(input);
+			logOpenAI("warn", "Parse pertama gagal, mencoba retry dengan prompt yang lebih ringkas.", {
+				...context,
+				requestId: "_request_id" in response ? response._request_id : undefined,
+				preview: text.slice(0, 300)
+			});
+
+			const retryResponse = await client.responses.create({
+				model: OPENAI_MODEL,
+				instructions:
+					"Keluarkan JSON valid saja. Jangan beri reasoning, jangan pakai markdown, jangan potong output.",
+				input: buildRetryPrompt(input),
+				max_output_tokens: OPENAI_MAX_OUTPUT_TOKENS
+			});
+			const retryText = extractText(retryResponse as OpenAIResponse);
+			parsed = parseTripPayload(retryText);
+
+			if (!parsed) {
+				logOpenAI(
+					"error",
+					"Respons OpenAI tidak bisa diparse sebagai JSON valid, memakai fallback planner lokal.",
+					{
+						...context,
+						requestId:
+							"_request_id" in retryResponse ? retryResponse._request_id : undefined,
+						preview: retryText.slice(0, 500),
+					},
+				);
+				return generateTripPlan(input);
+			}
+
+			logOpenAI("info", "Retry OpenAI berhasil diparse.", {
+				...context,
+				requestId:
+					"_request_id" in retryResponse ? retryResponse._request_id : undefined,
+				suggestionCount: parsed.suggestions?.length || 0,
+				dayCount: parsed.days?.length || 0,
+			});
+
+			return hydrateOpenAIPlan(input, parsed);
 		}
 
 		logOpenAI("info", "OpenAI berhasil menghasilkan itinerary.", {

@@ -4,6 +4,7 @@ export type Destination = {
   id: string;
   name: string;
   city: string;
+  address: string;
   type: DestinationType;
   category: string;
   coordinates: string;
@@ -30,6 +31,11 @@ export type ItineraryStop = {
   time: string;
   destinationId: string;
   title: string;
+  address: string;
+  mapsUrl: string;
+  entryFee: number;
+  mealCost: number;
+  transportCost: number;
   cost: number;
   notes: string;
 };

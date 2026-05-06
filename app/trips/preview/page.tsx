@@ -1,9 +1,26 @@
 import Link from "next/link";
 import { Header } from "@/components/header";
+import { DownloadPdfButton } from "@/components/download-pdf-button";
 import { TripPlan } from "@/lib/types";
 
 function formatCurrency(value: number) {
   return `Rp${new Intl.NumberFormat("id-ID").format(value)}`;
+}
+
+function buildStopCostLabel(entryFee: number, mealCost: number, transportCost: number) {
+  if (entryFee > 0) {
+    return `Tiket ${formatCurrency(entryFee)}`;
+  }
+
+  if (mealCost > 0) {
+    return `Makan ${formatCurrency(mealCost)}`;
+  }
+
+  if (transportCost > 0) {
+    return `Transport ${formatCurrency(transportCost)}`;
+  }
+
+  return "Gratis";
 }
 
 function formatStyle(style: string) {
@@ -16,6 +33,27 @@ function formatStyle(style: string) {
   }
 
   return "Balanced";
+}
+
+function getStyleCardClasses(style: string) {
+  if (style === "hidden-gem") {
+    return {
+      wrap: "border-emerald-200 bg-emerald-50 text-emerald-950",
+      label: "text-emerald-700"
+    };
+  }
+
+  if (style === "hemat") {
+    return {
+      wrap: "border-amber-200 bg-amber-50 text-amber-950",
+      label: "text-amber-700"
+    };
+  }
+
+  return {
+    wrap: "border-sky-200 bg-sky-50 text-sky-950",
+    label: "text-sky-700"
+  };
 }
 
 function readPlan(input: string | undefined): TripPlan | null {
@@ -56,21 +94,39 @@ export default async function PreviewPage({
     );
   }
 
+  const styleCardClasses = getStyleCardClasses(plan.input.style);
+
   return (
     <main className="shell grain min-h-screen pb-16">
       <Header />
       <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-10 lg:px-10">
         <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
           <div className="card rounded-[2rem] p-6 lg:p-8">
-            <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Itinerary</p>
-            <h1 className="font-display mt-2 text-4xl text-slate-900">
-              {plan.input.city}, {plan.input.days} hari untuk {plan.input.travelers} traveler
-            </h1>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Itinerary</p>
+                <h1 className="font-display mt-2 text-4xl text-slate-900">
+                  {plan.input.city}, {plan.input.days} hari untuk {plan.input.travelers} traveler
+                </h1>
+              </div>
+              <DownloadPdfButton plan={plan} />
+            </div>
             <p className="font-body mt-4 text-base leading-7 text-slate-600">{plan.summary}</p>
-            <div className="font-body mt-6 flex flex-wrap gap-3 text-sm text-slate-600">
-              <span className="pill rounded-full px-4 py-2">Style: {formatStyle(plan.input.style)}</span>
-              <span className="pill rounded-full px-4 py-2">Budget: {formatCurrency(plan.input.budget)}</span>
-              <span className="pill rounded-full px-4 py-2">Status: {plan.budget.status === "safe" ? "Aman" : "Melebihi budget"}</span>
+            <div className="mt-6 grid gap-3 md:grid-cols-[1.1fr_1fr_1fr]">
+              <div className={`rounded-[1.5rem] border p-4 ${styleCardClasses.wrap}`}>
+                <p className={`font-body text-xs uppercase tracking-[0.16em] ${styleCardClasses.label}`}>Style perjalanan</p>
+                <p className="font-display mt-2 text-2xl">{formatStyle(plan.input.style)}</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
+                <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">Budget total</p>
+                <p className="font-display mt-2 text-2xl text-slate-900">{formatCurrency(plan.input.budget)}</p>
+              </div>
+              <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
+                <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">Status</p>
+                <p className={`font-display mt-2 text-2xl ${plan.budget.status === "safe" ? "text-teal-700" : "text-rose-600"}`}>
+                  {plan.budget.status === "safe" ? "Aman" : "Melebihi budget"}
+                </p>
+              </div>
             </div>
             <div className="mt-8 grid gap-4 sm:grid-cols-3">
               <div className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
@@ -146,18 +202,39 @@ export default async function PreviewPage({
                     <div key={`${day.dayLabel}-${stop.destinationId}-${stopIndex}`} className="grid gap-4 rounded-[1.5rem] border border-slate-200 bg-white/70 p-5 md:grid-cols-[110px_1fr]">
                       <div className="flex items-start md:justify-center">
                         <div className="rounded-[1.25rem] bg-teal-50 px-4 py-3 text-center">
-                          <p className="font-body text-xs uppercase tracking-[0.14em] text-teal-700">Mulai</p>
-                          <p className="font-display mt-1 text-2xl text-slate-900">{stop.time}</p>
+                          <p className="font-body text-xs uppercase tracking-[0.14em] text-teal-700">Waktu</p>
+                          <p className="font-display mt-1 text-xl text-slate-900">{stop.time}</p>
                         </div>
                       </div>
                       <div>
                         <div className="flex flex-wrap items-center justify-between gap-4">
                           <div>
                             <h3 className="font-display text-2xl text-slate-900">{stop.title}</h3>
+                            <p className="font-body mt-2 text-sm text-slate-500">{stop.address}</p>
                             <p className="font-body mt-2 text-sm leading-6 text-slate-600">{stop.notes}</p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <span className="rounded-full border border-slate-200 bg-white px-3 py-1 font-body text-xs text-slate-700">
+                                {buildStopCostLabel(stop.entryFee, stop.mealCost, stop.transportCost)}
+                              </span>
+                              {stop.entryFee === 0 ? (
+                                <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 font-body text-xs text-emerald-700">
+                                  Biaya masuk gratis
+                                </span>
+                              ) : null}
+                            </div>
                           </div>
-                          <div className="rounded-full border border-slate-200 bg-white px-4 py-2 font-body text-sm font-semibold text-slate-700">
-                            {formatCurrency(stop.cost)}
+                          <div className="flex flex-col items-start gap-3 sm:items-end">
+                            <div className="rounded-full border border-slate-200 bg-white px-4 py-2 font-body text-sm font-semibold text-slate-700">
+                              Total {formatCurrency(stop.cost)}
+                            </div>
+                            <a
+                              href={stop.mapsUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="rounded-full bg-teal-700 px-4 py-2 font-body text-sm font-semibold text-white transition hover:bg-teal-800"
+                            >
+                              Buka di Maps
+                            </a>
                           </div>
                         </div>
                       </div>
@@ -169,30 +246,6 @@ export default async function PreviewPage({
           </div>
 
           <div className="space-y-6 lg:sticky lg:top-6 lg:h-fit">
-            <section className="card rounded-[2rem] p-6 lg:p-8">
-              <p className="font-body text-sm uppercase tracking-[0.22em] text-teal-700">Ringkasan Akses Destinasi</p>
-              <div className="mt-5 grid gap-3">
-                {plan.cart.map((ticket) => (
-                  <div key={ticket.destinationId} className="rounded-[1.5rem] border border-slate-200 bg-white/70 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <h3 className="font-display text-2xl text-slate-900">{ticket.title}</h3>
-                        <p className="font-body text-xs uppercase tracking-[0.16em] text-slate-500">
-                          {ticket.qrCodeHash}
-                        </p>
-                      </div>
-                      <span className="font-body rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-800">
-                        {ticket.status}
-                      </span>
-                    </div>
-                    <p className="font-body mt-2 text-sm text-slate-600">
-                      Estimasi biaya masuk: {formatCurrency(ticket.ticketPrice)}. Simpan kode referensi ini untuk memudahkan pencatatan trip dan koordinasi rombongan.
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </section>
-
             <section className="card rounded-[2rem] p-6 lg:p-8">
               <p className="font-body text-sm uppercase tracking-[0.22em] text-amber-600">Rekomendasi Optimasi</p>
               <div className="mt-4 space-y-3">
