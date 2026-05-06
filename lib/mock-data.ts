@@ -1,0 +1,102 @@
+import { Destination } from "@/lib/types";
+
+export const destinations: Destination[] = [
+  {
+    id: "bdg-kawah-putih",
+    name: "Kawah Putih",
+    city: "Bandung",
+    type: "Popular",
+    category: "Nature",
+    coordinates: "-7.1660, 107.4026",
+    entryFee: 85000,
+    operatingHours: "07:00 - 17:00",
+    openAt: 7,
+    closeAt: 17,
+    visitMinutes: 120,
+    mealBudget: 45000,
+    transportBudget: 65000,
+    summary: "Danau vulkanik ikonik dengan pemandangan dramatis untuk wisata pagi."
+  },
+  {
+    id: "bdg-ranca-upas",
+    name: "Ranca Upas",
+    city: "Bandung",
+    type: "Hidden Gem",
+    category: "Nature",
+    coordinates: "-7.1387, 107.3922",
+    entryFee: 28000,
+    operatingHours: "08:00 - 17:00",
+    openAt: 8,
+    closeAt: 17,
+    visitMinutes: 90,
+    mealBudget: 35000,
+    transportBudget: 45000,
+    summary: "Area penangkaran rusa dan camping ground dengan ritme santai."
+  },
+  {
+    id: "bdg-braga",
+    name: "Braga Heritage Walk",
+    city: "Bandung",
+    type: "Popular",
+    category: "City",
+    coordinates: "-6.9175, 107.6098",
+    entryFee: 0,
+    operatingHours: "09:00 - 22:00",
+    openAt: 9,
+    closeAt: 22,
+    visitMinutes: 120,
+    mealBudget: 70000,
+    transportBudget: 30000,
+    summary: "Koridor kota lama untuk kuliner, foto, dan jalan sore."
+  },
+  {
+    id: "yk-borobudur",
+    name: "Candi Borobudur",
+    city: "Yogyakarta",
+    type: "Popular",
+    category: "Culture",
+    coordinates: "-7.6079, 110.2038",
+    entryFee: 50000,
+    operatingHours: "06:30 - 16:30",
+    openAt: 6,
+    closeAt: 16,
+    visitMinutes: 150,
+    mealBudget: 50000,
+    transportBudget: 70000,
+    summary: "Destinasi budaya utama untuk start trip yang berkesan."
+  },
+  {
+    id: "yk-taman-sari",
+    name: "Taman Sari",
+    city: "Yogyakarta",
+    type: "Popular",
+    category: "Culture",
+    coordinates: "-7.8099, 110.3592",
+    entryFee: 15000,
+    operatingHours: "09:00 - 15:00",
+    openAt: 9,
+    closeAt: 15,
+    visitMinutes: 90,
+    mealBudget: 35000,
+    transportBudget: 25000,
+    summary: "Bekas taman kerajaan dengan alur wisata singkat dan padat cerita."
+  },
+  {
+    id: "yk-breksi",
+    name: "Tebing Breksi",
+    city: "Yogyakarta",
+    type: "Hidden Gem",
+    category: "Nature",
+    coordinates: "-7.7817, 110.5046",
+    entryFee: 10000,
+    operatingHours: "08:00 - 21:00",
+    openAt: 8,
+    closeAt: 21,
+    visitMinutes: 120,
+    mealBudget: 40000,
+    transportBudget: 35000,
+    summary: "Spot senja dengan biaya rendah dan view batuan unik."
+  }
+];
+
+export const supportedCities = Array.from(new Set(destinations.map((item) => item.city)));
