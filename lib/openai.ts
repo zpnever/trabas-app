@@ -108,6 +108,75 @@ function safeJsonParse<T>(value: string): T | null {
 	}
 }
 
+function extractFirstJsonObject(value: string) {
+	const start = value.indexOf("{");
+
+	if (start === -1) {
+		return null;
+	}
+
+	let depth = 0;
+	let inString = false;
+	let escaped = false;
+
+	for (let index = start; index < value.length; index += 1) {
+		const char = value[index];
+
+		if (inString) {
+			if (escaped) {
+				escaped = false;
+				continue;
+			}
+
+			if (char === "\\") {
+				escaped = true;
+				continue;
+			}
+
+			if (char === '"') {
+				inString = false;
+			}
+
+			continue;
+		}
+
+		if (char === '"') {
+			inString = true;
+			continue;
+		}
+
+		if (char === "{") {
+			depth += 1;
+		}
+
+		if (char === "}") {
+			depth -= 1;
+
+			if (depth === 0) {
+				return value.slice(start, index + 1);
+			}
+		}
+	}
+
+	return null;
+}
+
+function parseTripPayload(value: string) {
+	const direct = safeJsonParse<OpenAITripPayload>(value);
+
+	if (direct) {
+		return direct;
+	}
+
+	const embeddedJson = extractFirstJsonObject(value);
+
+	if (!embeddedJson) {
+		return null;
+	}
+
+	return safeJsonParse<OpenAITripPayload>(embeddedJson);
+}
+
 function hydrateOpenAIPlan(
 	input: TripFormInput,
 	payload: OpenAITripPayload,
@@ -248,6 +317,7 @@ Balas HANYA dalam JSON valid dengan bentuk:
   ],
   "suggestions": ["string", "string", "string"]
 }
+Jangan tambahkan penjelasan, reasoning, pembuka, atau markdown di luar JSON.
 `.trim();
 }
 
@@ -288,7 +358,7 @@ export async function generateTripPlanWithOpenAI(
 			max_output_tokens: 1400,
 		});
 		const text = extractText(response as OpenAIResponse);
-		const parsed = safeJsonParse<OpenAITripPayload>(text);
+		const parsed = parseTripPayload(text);
 
 		if (!parsed) {
 			logOpenAI(
